@@ -1,5 +1,6 @@
 package com.content.service.impl;
 
+import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.content.BaseContentPO;
 import com.content.code.BaseResponse;
@@ -9,7 +10,7 @@ import com.content.model.LoadRecord;
 import com.content.model.LoadRecordExample;
 import com.content.service.AnalyseService;
 import com.content.utils.AnalyzeUtil;
-import com.content.utils.DouYinDecode;
+import com.content.utils.App;
 import com.content.utils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,6 @@ public class AnalyseServiceImpl implements AnalyseService {
             baseResponse = new BaseResponse(CommonEnum.ERROR.getCode(),"请求地址为空");
         }
         String analyseUrl = FileUtils.analyseUrl(baseContentPO.getLink());
-        logger.info("请求的视频链接地址:"+analyseUrl);
         if(null == analyseUrl) {
             baseResponse = new BaseResponse(CommonEnum.ERROR.getCode());
             return baseResponse;
@@ -47,8 +47,10 @@ public class AnalyseServiceImpl implements AnalyseService {
         String url = null;
         JSONObject jsonObject = null;
         if(baseContentPO.getLink().contains("douyin")) {
-            String playAddr = DouYinDecode.getURI(DouYinDecode.NewUrlDecode(DouYinDecode.urlAnalysisMethod(analyseUrl))).trim();// 有空白符
-            System.out.println("======本地接口======");
+            //发起无状态请求
+            String s = HttpUtil.get(App.douyin(analyseUrl));
+            url = s.substring(s.indexOf("http"),s.lastIndexOf("\""));
+            System.out.println("======进入抖音解析本地接口======解析地址:"+url);
         }else {
             String result = AnalyzeUtil.analyseVideo(analyseUrl);
             jsonObject = JSONObject.parseObject(result);
@@ -58,25 +60,23 @@ public class AnalyseServiceImpl implements AnalyseService {
                     return new BaseResponse(CommonEnum.ERROR.getCode(),"该视频暂时不能解析");
                 }
                 System.out.println("======进入第三方接口======");
+             }
+        }
+        //查看该视频是否已经进行过下载
+        LoadRecordExample recordExample = new LoadRecordExample();
+        recordExample.createCriteria().andFileUrlEqualTo(url);
+        long count = loadRecordMapper.countByExample(recordExample);
+        if(count == 0) {
+            LoadRecord loadRecord = new LoadRecord();
+            loadRecord.setFileUrl(url);
+            loadRecord.setCreateTime(new Date());
+            loadRecordMapper.insertSelective(loadRecord);
+            Integer fileId = loadRecord.getFileId();
+            //将视频上传至服务器
+            fileUtils.downLoadFileByUrl(url,fileId+"");
         }
 
-            //查看该视频是否已经进行过下载
-            LoadRecordExample recordExample = new LoadRecordExample();
-            recordExample.createCriteria().andFileUrlEqualTo(url);
-            long count = loadRecordMapper.countByExample(recordExample);
-            if(count == 0) {
-                LoadRecord loadRecord = new LoadRecord();
-                loadRecord.setFileUrl(url);
-                loadRecord.setCreateTime(new Date());
-                loadRecordMapper.insertSelective(loadRecord);
-                Integer fileId = loadRecord.getFileId();
-                //将视频上传至服务器
-                fileUtils.downLoadFileByUrl(url,fileId+"");
-
-            }
-
-            baseResponse = new BaseResponse(CommonEnum.SUCCESS,url);
-        }
+        baseResponse = new BaseResponse(CommonEnum.SUCCESS,url);
 
         return baseResponse;
     }

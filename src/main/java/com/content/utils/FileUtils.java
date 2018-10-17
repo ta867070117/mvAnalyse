@@ -32,7 +32,7 @@ public class FileUtils {
             saveFile.getParentFile().mkdirs();
         }
         long size = HttpUtil.downloadFile(url, FileUtil.file(saveFile+".mp4"));
-        logger.info("视频下载完成 视频大小:"+size);
+        System.out.println("======视频下载完成 视频大小:"+ FileUtil.readableFileSize(size));
 
     }
 
@@ -78,7 +78,7 @@ public class FileUtils {
         int endIndex = buffer.lastIndexOf("/");
 
         String substring = buffer.substring(startIndex, endIndex);
-        logger.info("去掉多余的参数后的url:"+substring);
+        System.out.println(("去掉多余的参数后的url:" + substring));
         link = substring;
         return link;
     }
