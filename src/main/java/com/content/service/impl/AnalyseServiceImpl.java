@@ -9,6 +9,7 @@ import com.content.model.LoadRecord;
 import com.content.model.LoadRecordExample;
 import com.content.service.AnalyseService;
 import com.content.utils.AnalyzeUtil;
+import com.content.utils.DouYinDecode;
 import com.content.utils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,10 +47,7 @@ public class AnalyseServiceImpl implements AnalyseService {
         String url = null;
         JSONObject jsonObject = null;
         if(baseContentPO.getLink().contains("douyin")) {
-            //String playAddr = DouYinDecode.getURI(DouYinDecode.NewUrlDecode(DouYinDecode.urlAnalysisMethod(analyseUrl))).trim();// 有空白符
-            //System.out.println("返回后的数据"+playAddr);
-            //String cover = DouYinDecode.getCover(DouYinDecode.urlAnalysisMethod(douYinUrl)).trim();// 有空白符
-            //url = playAddr;
+            String playAddr = DouYinDecode.getURI(DouYinDecode.NewUrlDecode(DouYinDecode.urlAnalysisMethod(analyseUrl))).trim();// 有空白符
             System.out.println("======本地接口======");
         }else {
             String result = AnalyzeUtil.analyseVideo(analyseUrl);

@@ -24,6 +24,7 @@ public class FileUtils {
      */
     @Async
     public void downLoadFileByUrl(String url,String fileName) {
+        System.out.println("======开始上传视频文件======");
         //将视频保存到服务器目录
         String property = System.getProperty("catalina.home")+"/webapps";
         File saveFile = new File(property+("/ROOT/upload/") + fileName);
