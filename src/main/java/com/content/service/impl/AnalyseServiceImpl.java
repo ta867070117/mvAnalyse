@@ -36,17 +36,18 @@ public class AnalyseServiceImpl implements AnalyseService {
     @Override
     public BaseResponse analyseVideo(BaseContentPO baseContentPO) {
         BaseResponse baseResponse = null;
-        if(null == baseContentPO.getLink()) {
+        if(null == baseContentPO.getLink() || "".equals(baseContentPO.getLink())) {
+            System.out.println("======请求的链接地址为空======");
             baseResponse = new BaseResponse(CommonEnum.ERROR.getCode(),"请求地址为空");
         }
         String analyseUrl = FileUtils.analyseUrl(baseContentPO.getLink());
-        if(null == analyseUrl) {
+        if(null == analyseUrl || "".equals(analyseUrl)) {
             baseResponse = new BaseResponse(CommonEnum.ERROR.getCode());
             return baseResponse;
         }
         String url = null;
         JSONObject jsonObject = null;
-        if(baseContentPO.getLink().contains("douyin")) {
+        if(baseContentPO.getLink().contains("douyincc")) {
             //发起无状态请求
             String s = HttpUtil.get(App.douyin(analyseUrl));
             url = s.substring(s.indexOf("http"),s.lastIndexOf("\""));
@@ -62,6 +63,10 @@ public class AnalyseServiceImpl implements AnalyseService {
                 System.out.println("======进入第三方接口======");
              }
         }
+        if(null == url || "".equals(url)) {
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"该视频暂时不能解析");
+        }
+
         //查看该视频是否已经进行过下载
         LoadRecordExample recordExample = new LoadRecordExample();
         recordExample.createCriteria().andFileUrlEqualTo(url);
