@@ -12,11 +12,13 @@ import com.content.service.AnalyseService;
 import com.content.utils.AnalyzeUtil;
 import com.content.utils.App;
 import com.content.utils.FileUtils;
+import com.content.utils.HttpClientUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.Date;
 
 /**
@@ -38,20 +40,29 @@ public class AnalyseServiceImpl implements AnalyseService {
         BaseResponse baseResponse = null;
         if(null == baseContentPO.getLink() || "".equals(baseContentPO.getLink())) {
             System.out.println("======请求的链接地址为空======");
-            baseResponse = new BaseResponse(CommonEnum.ERROR.getCode(),"请求地址为空");
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"请求地址为空");
         }
+        System.out.println("======用户传入的视频链接======"+baseContentPO.getLink());
+        //去除中文 仅保留视频链接
         String analyseUrl = FileUtils.analyseUrl(baseContentPO.getLink());
         if(null == analyseUrl || "".equals(analyseUrl)) {
-            baseResponse = new BaseResponse(CommonEnum.ERROR.getCode());
-            return baseResponse;
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"视频地址不能为空");
         }
+
         String url = null;
         JSONObject jsonObject = null;
-        if(baseContentPO.getLink().contains("douyincc")) {
-            //发起无状态请求
-            String s = HttpUtil.get(App.douyin(analyseUrl));
-            url = s.substring(s.indexOf("http"),s.lastIndexOf("\""));
-            System.out.println("======进入抖音解析本地接口======解析地址:"+url);
+        if(baseContentPO.getLink().contains("douyin")) {
+            System.out.println("======进入抖音解析本地接口======解析地址:"+analyseUrl);
+            String douyin = App.douyin(analyseUrl);
+            System.out.println("======本地解析后无水印视频链接地址======"+douyin);
+            if(null == douyin) {
+                System.out.println("======视频出错地址======"+analyseUrl);
+                return new BaseResponse(CommonEnum.ERROR.getCode(),"联系微信：Take5127 该视频不可解析");
+            }
+            url = douyin;
+            //此处进行抖音下载的操作
+            downLoadDouYin(douyin);
+
         }else {
             String result = AnalyzeUtil.analyseVideo(analyseUrl);
             jsonObject = JSONObject.parseObject(result);
@@ -66,8 +77,28 @@ public class AnalyseServiceImpl implements AnalyseService {
         if(null == url || "".equals(url)) {
             return new BaseResponse(CommonEnum.ERROR.getCode(),"该视频暂时不能解析");
         }
+        if(!baseContentPO.getLink().equals("douyin")) {
+            //查看该视频是否已经进行过下载
+            LoadRecordExample recordExample = new LoadRecordExample();
+            recordExample.createCriteria().andFileUrlEqualTo(url);
+            long count = loadRecordMapper.countByExample(recordExample);
+            if(count == 0) {
+                LoadRecord loadRecord = new LoadRecord();
+                loadRecord.setFileUrl(url);
+                loadRecord.setCreateTime(new Date());
+                loadRecordMapper.insertSelective(loadRecord);
+                Integer fileId = loadRecord.getFileId();
+                //将视频上传至服务器
+                fileUtils.downLoadFileByUrl(url,fileId+"");
+            }
+        }
 
-        //查看该视频是否已经进行过下载
+        baseResponse = new BaseResponse(CommonEnum.SUCCESS,url);
+
+        return baseResponse;
+    }
+
+    public void downLoadDouYin(String url) {
         LoadRecordExample recordExample = new LoadRecordExample();
         recordExample.createCriteria().andFileUrlEqualTo(url);
         long count = loadRecordMapper.countByExample(recordExample);
@@ -77,12 +108,38 @@ public class AnalyseServiceImpl implements AnalyseService {
             loadRecord.setCreateTime(new Date());
             loadRecordMapper.insertSelective(loadRecord);
             Integer fileId = loadRecord.getFileId();
-            //将视频上传至服务器
-            fileUtils.downLoadFileByUrl(url,fileId+"");
+            String fileName = fileId+".mp4";
+            String property = System.getProperty("catalina.home")+"/webapps";
+            File saveFile = new File(property+("/ROOT/upload/") + fileName);
+            if (!saveFile.getParentFile().exists()) {
+                saveFile.getParentFile().mkdirs();
+            }
+            System.out.println("输出的视频链接地址===="+saveFile);
+            int times = 1;
+            //开始抖音视频的解析下载
+            try {
+                HttpClientUtils.getInstance().download(url, saveFile+"",
+                        new HttpClientUtils.HttpClientDownLoadProgress() {
+                            @Override
+                            public void onProgress(int progress) {
+                                if(progress == 100) {
+                                    System.out.println("======视频下载完成======");
+                                }
+                            }});
+            } catch (Exception e) {
+                System.out.println("=======下载都是视频文件时出现异常=======重试次数"+times);
+                if(times < 3) {
+                    HttpClientUtils.getInstance().download(url, "C:\\Users\\wanglei\\Desktop\\3.mp4",
+                            new HttpClientUtils.HttpClientDownLoadProgress() {
+                                @Override
+                                public void onProgress(int progress) {
+                                    if(progress == 100) {
+                                        System.out.println("======视频下载完成======");
+                                    }
+                                }});
+                }
+                times++;
+            }
         }
-
-        baseResponse = new BaseResponse(CommonEnum.SUCCESS,url);
-
-        return baseResponse;
     }
 }

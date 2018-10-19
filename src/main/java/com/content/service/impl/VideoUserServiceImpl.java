@@ -90,7 +90,7 @@ public class VideoUserServiceImpl implements VideoUserService {
     public BaseResponse getAnalyseTimes(BaseContentPO baseContentPO) {
         //短视频去水印小助手
         if(null == baseContentPO.getProgramType()) {
-            System.out.println("======短视频去水印小助手======");
+            System.out.println("\n\n======短视频去水印小助手======");
             baseContentPO.setAppid("wxc67f59c5abda3db2");
             baseContentPO.setSecret("9345cea7f8a41ea451f067777556650e");
             //短视频去水印哟
@@ -123,7 +123,7 @@ public class VideoUserServiceImpl implements VideoUserService {
         JSONObject object = JSONObject.parseObject(userInfo);
         if(null != object.getString("errcode")) {
             logger.info("======获取用户openId出现错误======");
-            return new BaseResponse(CommonEnum.Limit.getCode(),"已经达到解析次数");
+            return new BaseResponse(CommonEnum.Limit.getCode(),"已上限请联系作者微信：Take5127");
         }
 
         String openid = object.getString("openid");
@@ -145,12 +145,13 @@ public class VideoUserServiceImpl implements VideoUserService {
         } catch (Exception e) {
             baseContentPO.setNickName("带表情的昵称");
             insertUser(baseContentPO);
-            logger.info("出现带表情的昵称");
+            logger.info("=======出现带表情的昵称======");
         }
 
         Integer attendNum = getAttendNum(openid);
         if(attendNum > 3) {
-            baseResponse = new BaseResponse(CommonEnum.Limit.getCode(),"已经达到解析次数");
+            System.out.println("======该用户已经达到解析次数======"+openid);
+            baseResponse = new BaseResponse(CommonEnum.Limit.getCode(),"已上限请联系作者微信：Take5127");
         }else {
             baseResponse = new BaseResponse(CommonEnum.SUCCESS.getCode());
         }
