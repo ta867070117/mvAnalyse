@@ -81,21 +81,23 @@ public class AnalyseServiceImpl implements AnalyseService {
         if(null == url || "".equals(url)) {
             return new BaseResponse(CommonEnum.ERROR.getCode(),"该视频暂时不能解析");
         }
-        if(!baseContentPO.getLink().equals("douyin")) {
+        if(!baseContentPO.getLink().contains("douyin")) {
             //查看该视频是否已经进行过下载
             LoadRecordExample recordExample = new LoadRecordExample();
             recordExample.createCriteria().andFileUrlEqualTo(url);
             List<LoadRecord> loadRecords = loadRecordMapper.selectByExample(recordExample);
-            long count = loadRecordMapper.countByExample(recordExample);
-            if(count == 0) {
+            Integer fileId = null;
+            if(null != loadRecords && loadRecords.size() > 0) {
+                fileId = loadRecords.get(0).getFileId();
+            }else {
                 LoadRecord loadRecord = new LoadRecord();
                 loadRecord.setFileUrl(url);
                 loadRecord.setCreateTime(new Date());
                 loadRecordMapper.insertSelective(loadRecord);
-                Integer fileId = loadRecord.getFileId();
-                //将视频上传至服务器
-                fileUtils.downLoadFileByUrl(url,fileId+"");
+                fileId = loadRecord.getFileId();
             }
+            //将视频上传至服务器
+            fileUtils.downLoadFileByUrl(url,fileId+"");
         }
 
         baseResponse = new BaseResponse(CommonEnum.SUCCESS,url);
@@ -106,23 +108,38 @@ public class AnalyseServiceImpl implements AnalyseService {
     public void downLoadDouYin(String url) {
         LoadRecordExample recordExample = new LoadRecordExample();
         recordExample.createCriteria().andFileUrlEqualTo(url);
-        long count = loadRecordMapper.countByExample(recordExample);
-        if(count == 0) {
+        List<LoadRecord> loadRecords = loadRecordMapper.selectByExample(recordExample);
+        Integer fileId = null;
+        if(null != loadRecords && loadRecords.size() > 0) {
+            fileId = loadRecords.get(0).getFileId();
+        }else {
             LoadRecord loadRecord = new LoadRecord();
             loadRecord.setFileUrl(url);
             loadRecord.setCreateTime(new Date());
             loadRecordMapper.insertSelective(loadRecord);
-            Integer fileId = loadRecord.getFileId();
-            String fileName = fileId+".mp4";
-            String property = System.getProperty("catalina.home")+"/webapps";
-            File saveFile = new File(property+("/ROOT/upload/") + fileName);
-            if (!saveFile.getParentFile().exists()) {
-                saveFile.getParentFile().mkdirs();
-            }
-            System.out.println("输出的视频链接地址===="+saveFile);
-            int times = 1;
-            //开始抖音视频的解析下载
-            try {
+            fileId = loadRecord.getFileId();
+        }
+        String fileName = fileId+".mp4";
+        String property = System.getProperty("catalina.home")+"/webapps";
+        File saveFile = new File(property+("/ROOT/upload/") + fileName);
+        if (!saveFile.getParentFile().exists()) {
+            saveFile.getParentFile().mkdirs();
+        }
+        System.out.println("输出的视频链接地址===="+saveFile);
+        int times = 1;
+        //开始抖音视频的解析下载
+        try {
+            HttpClientUtils.getInstance().download(url, saveFile+"",
+                    new HttpClientUtils.HttpClientDownLoadProgress() {
+                        @Override
+                        public void onProgress(int progress) {
+                            if(progress == 100) {
+                                System.out.println("======视频下载完成======");
+                            }
+                        }});
+        } catch (Exception e) {
+            System.out.println("=======下载都是视频文件时出现异常=======重试次数"+times);
+            if(times < 3) {
                 HttpClientUtils.getInstance().download(url, saveFile+"",
                         new HttpClientUtils.HttpClientDownLoadProgress() {
                             @Override
@@ -131,20 +148,8 @@ public class AnalyseServiceImpl implements AnalyseService {
                                     System.out.println("======视频下载完成======");
                                 }
                             }});
-            } catch (Exception e) {
-                System.out.println("=======下载都是视频文件时出现异常=======重试次数"+times);
-                if(times < 3) {
-                    HttpClientUtils.getInstance().download(url, "C:\\Users\\wanglei\\Desktop\\3.mp4",
-                            new HttpClientUtils.HttpClientDownLoadProgress() {
-                                @Override
-                                public void onProgress(int progress) {
-                                    if(progress == 100) {
-                                        System.out.println("======视频下载完成======");
-                                    }
-                                }});
-                }
-                times++;
             }
+            times++;
         }
     }
 }
