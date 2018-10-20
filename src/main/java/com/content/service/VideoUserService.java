@@ -13,4 +13,6 @@ public interface VideoUserService {
     Integer getAttendNum(String openid);
 
     BaseResponse getAnalyseTimes(BaseContentPO baseContentPO);
+
+    BaseResponse getUserInfo(BaseContentPO baseContentPO);
 }

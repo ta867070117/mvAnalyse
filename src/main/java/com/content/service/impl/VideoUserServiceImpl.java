@@ -157,4 +157,20 @@ public class VideoUserServiceImpl implements VideoUserService {
         }
         return baseResponse;
     }
+
+    @Override
+    public BaseResponse getUserInfo(BaseContentPO baseContentPO) {
+        System.out.println("======开始获取用户详细信息======");
+        if(null == baseContentPO.getOpenId()) {
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"openId不能为空");
+        }
+        VideoUserExample videoUserExample = new VideoUserExample();
+        videoUserExample.createCriteria().andOpenIdEqualTo(baseContentPO.getOpenId());
+        List<VideoUser> videoUsers = videoUserMapper.selectByExample(videoUserExample);
+        if(null != videoUsers && videoUsers.size() > 0) {
+            return new BaseResponse(CommonEnum.SUCCESS,videoUsers.get(0));
+        }else {
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"该用户不存在");
+        }
+    }
 }

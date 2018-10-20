@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author Shinelon
@@ -41,6 +42,9 @@ public class AnalyseServiceImpl implements AnalyseService {
         if(null == baseContentPO.getLink() || "".equals(baseContentPO.getLink())) {
             System.out.println("======请求的链接地址为空======");
             return new BaseResponse(CommonEnum.ERROR.getCode(),"请求地址为空");
+        }
+        if(!baseContentPO.getLink().contains("http")) {
+            return new BaseResponse(CommonEnum.ERROR.getCode(),"视频链接地址不正确");
         }
         System.out.println("======用户传入的视频链接======"+baseContentPO.getLink());
         //去除中文 仅保留视频链接
@@ -81,6 +85,7 @@ public class AnalyseServiceImpl implements AnalyseService {
             //查看该视频是否已经进行过下载
             LoadRecordExample recordExample = new LoadRecordExample();
             recordExample.createCriteria().andFileUrlEqualTo(url);
+            List<LoadRecord> loadRecords = loadRecordMapper.selectByExample(recordExample);
             long count = loadRecordMapper.countByExample(recordExample);
             if(count == 0) {
                 LoadRecord loadRecord = new LoadRecord();

@@ -31,4 +31,14 @@ public class UserController {
         return videoUserService.getAnalyseTimes(baseContentPO);
     }
 
+    /**
+     * 获取用户信息
+     * @param baseContentPO
+     * @return
+     */
+    @RequestMapping("/getUserInfo")
+    public BaseResponse getUserInfo(BaseContentPO baseContentPO) {
+        return videoUserService.getUserInfo(baseContentPO);
+    }
+
 }
